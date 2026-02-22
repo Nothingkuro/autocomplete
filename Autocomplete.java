@@ -1,5 +1,8 @@
 import java.util.Arrays;
 import java.util.Comparator;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 
 public class Autocomplete {
     private final Term[] terms;
@@ -61,29 +64,50 @@ public class Autocomplete {
         return BinarySearchDeluxe.lastIndexOf(terms, dummy, comp);
     }
 
-    // test client
+    // test client - using standard Java I/O only
     public static void main(String[] args) {
-        String filename = args[0];
-        In in = new In(filename);
-        int n = in.readInt();
-        Term[] terms = new Term[n];
-        
-        for (int i = 0; i < n; i++) {
-            long weight = in.readLong();
-            in.readChar();
-            String query = in.readLine();
-            terms[i] = new Term(query, weight);
+        if (args.length < 2) {
+            System.out.println("Usage: java Autocomplete <filename> <k>");
+            return;
         }
-
-        int k = Integer.parseInt(args[1]);
-        Autocomplete ac = new Autocomplete(terms);
         
-        while (StdIn.hasNextLine()) {
-            String prefix = StdIn.readLine();
-            Term[] results = ac.allMatches(prefix);
-            StdOut.printf("%d matches\n", ac.numberOfMatches(prefix));
-            for (int i = 0; i < Math.min(k, results.length); i++)
-                StdOut.println(results[i]);
+        try {
+            String filename = args[0];
+            Scanner fileScanner = new Scanner(new File(filename), "UTF-8");
+            
+            int n = fileScanner.nextInt();
+            Term[] terms = new Term[n];
+            
+            for (int i = 0; i < n; i++) {
+                long weight = fileScanner.nextLong();
+                // Read the rest of the line (includes tab and query)
+                String line = fileScanner.nextLine();
+                // Remove leading tab if present
+                if (line.startsWith("\t")) {
+                    line = line.substring(1);
+                }
+                terms[i] = new Term(line, weight);
+            }
+            fileScanner.close();
+
+            int k = Integer.parseInt(args[1]);
+            Autocomplete ac = new Autocomplete(terms);
+            
+            System.out.println("Enter prefixes (Ctrl+Z to exit on Windows, Ctrl+D on Mac/Linux):");
+            Scanner consoleScanner = new Scanner(System.in, "UTF-8");
+            
+            while (consoleScanner.hasNextLine()) {
+                String prefix = consoleScanner.nextLine();
+                Term[] results = ac.allMatches(prefix);
+                System.out.printf("%d matches\n", ac.numberOfMatches(prefix));
+                for (int i = 0; i < Math.min(k, results.length); i++)
+                    System.out.println(results[i]);
+                System.out.println();
+            }
+            consoleScanner.close();
+            
+        } catch (FileNotFoundException e) {
+            System.err.println("File not found: " + args[0]);
         }
     }
 }
